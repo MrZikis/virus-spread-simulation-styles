@@ -1,63 +1,77 @@
-export interface City {
+interface City {
     population: number;
     infected: number;
     neighbors: string[];
     susceptible: number;
 }
 
-export interface Cities {
-    [key: string]: City;
+interface Results {
+    day: number;
+    cities: Record<string, { susceptible: number; infected: number }>;
 }
 
-import { Cities } from './types';
+export const simulateEpidemic = (): Results[] => {
+    const cities: Record<string, City> = {
+        Plzen: {
+            population: 170000,
+            infected: 10,
+            neighbors: ['Klatovy'],
+            susceptible: 170000 - 10,
+        },
+        Klatovy: {
+            population: 22000,
+            infected: 0,
+            neighbors: ['Plzen', 'Domazlice'],
+            susceptible: 22000,
+        },
+        Domazlice: {
+            population: 11000,
+            infected: 0,
+            neighbors: ['Klatovy'],
+            susceptible: 11000,
+        },
+    };
 
-const simulateEpidemic = (cities: Cities, numDays: number): any[] => {
     const betaIntra = 0.3;
     const theta = 0.05;
     const betaExponent = 1;
-    const populationMax = Math.max(...Object.values(cities).map(city => city.population));
+    const populationMax = Math.max(...Object.values(cities).map((city) => city.population));
+    const numDays = 50;
 
-    const results = [];
+    const simulationResults: Results[] = [];
 
     for (let day = 0; day < numDays; day++) {
-        const dayResults: any = { Day: day + 1 };
-        const newValues: any = {};
+        const dayResults: Results = { day: day + 1, cities: {} };
+        const newValues: Record<string, { susceptible: number; infected: number }> = {};
 
         for (const cityName in cities) {
-            const city = cities[cityName];
-            const S_i = city.susceptible;
-            const I_i = city.infected;
-            const N_i = city.population;
+            const cityData = cities[cityName];
+            let S_i = cityData.susceptible;
+            let I_i = cityData.infected;
+            const N_i = cityData.population;
 
             const delta_I_intra = betaIntra * S_i * I_i / N_i;
 
             let delta_I_inter = 0;
+            for (const neighborName of cityData.neighbors) {
+                const neighborData = cities[neighborName];
+                const I_j = neighborData.infected;
+                const N_j = neighborData.population;
 
-            for (const neighborName of city.neighbors) {
-                const neighbor = cities[neighborName];
-                const I_j = neighbor.infected;
-                const N_j = neighbor.population;
-
-                if (N_j > 0) {
-                    delta_I_inter += theta * (N_j / populationMax) ** betaExponent * (I_j / N_j) * S_i;
-                }
+                const delta_I_ji = theta * (N_j / populationMax) ** betaExponent * (I_j / N_j) * S_i;
+                delta_I_inter += delta_I_ji;
             }
 
-            let delta_I_total = delta_I_intra + delta_I_inter;
-
-            delta_I_total = Math.min(delta_I_total, S_i);
-
-            const S_i_next = S_i - delta_I_total;
-            const I_i_next = I_i + delta_I_total;
+            const delta_I_total = Math.min(delta_I_intra + delta_I_inter, S_i);
 
             newValues[cityName] = {
-                susceptible: S_i_next,
-                infected: I_i_next
+                susceptible: S_i - delta_I_total,
+                infected: I_i + delta_I_total,
             };
 
-            dayResults[cityName] = {
-                Neinfikovaní: Math.floor(S_i_next),
-                Infikovaní: Math.floor(I_i_next)
+            dayResults.cities[cityName] = {
+                susceptible: Math.floor(newValues[cityName].susceptible),
+                infected: Math.floor(newValues[cityName].infected),
             };
         }
 
@@ -66,11 +80,9 @@ const simulateEpidemic = (cities: Cities, numDays: number): any[] => {
             cities[cityName].infected = newValues[cityName].infected;
         }
 
-        results.push(dayResults);
+        simulationResults.push(dayResults);
     }
 
-    return results;
+    return simulationResults;
 };
 
-
-export default simulateEpidemic;

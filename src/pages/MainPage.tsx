@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import DistrictMap from '../components/Map';
-import { FaBookmark } from 'react-icons/fa';
+import { FaBookmark } from "react-icons/fa";
+import React, { useState } from "react";
+import DistrictMap from "../components/Map";
 
 interface InfectionDataEntry {
     infected: number;
@@ -48,4 +48,3 @@ const MainPage = () => {
 };
 
 export default MainPage;
-``
